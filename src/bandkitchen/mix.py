@@ -74,9 +74,24 @@ def limit(
 ) -> tuple[np.ndarray, float]:
     """Look-ahead peak limiter. Guarantees |y| <= ceiling at every sample.
 
-    Gain = moving average (length L) of a running minimum (length L) of the required gain.
-    Every averaged value is <= the required gain at each peak, so the ceiling holds exactly,
-    while the gain glides down over L samples before the peak and back up after it.
+    How the gain curve is built (L = ``window_ms`` in samples, 960 at 48 kHz by default):
+
+    1. Required gain, per sample: ``need[k] = min(1, ceiling / |x[k]|)``. It is the gain
+       that would bring that sample exactly to the ceiling (1.0, i.e. untouched, if it's
+       already below).
+    2. Hold: ``m[k] = min(need[k-L+1 .. k])``. Each dip in ``need`` is stretched to last L
+       samples after it.
+    3. Smooth: ``g[p] = mean(m[p .. p+L-1])``. Averaging over the *next* L samples is the
+       look-ahead: the gain starts falling before a peak arrives.
+
+    Why the ceiling holds exactly: every ``m[k]`` in the window ``p .. p+L-1`` covers sample
+    ``p`` in its own hold window, so each one is <= ``need[p]``, and so is their average.
+
+    Result: around an isolated peak, the gain ramps down in a straight line over the L
+    samples before it, reaches the required value exactly at the peak, and ramps back up
+    over the L samples after it. Smooth ramps instead of a sudden gain jump avoid clicks
+    and distortion.
+
     Returns (y, max_reduction_db).
     """
     x = to_stereo(x)
