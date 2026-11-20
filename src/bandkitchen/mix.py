@@ -111,14 +111,25 @@ def limit(
 
 
 def mix(
-    instrument: np.ndarray, song_aligned: np.ndarray, sr: int, settings: MixSettings | None = None
+    instrument: np.ndarray,
+    song_aligned: np.ndarray,
+    sr: int,
+    settings: MixSettings | None = None,
+    song_reference: np.ndarray | None = None,
 ) -> tuple[np.ndarray, MixReport]:
-    """Mix the player's audio with the (already aligned) song. Both float, same length."""
+    """Mix the player's audio with the (already aligned) song. All float, same length.
+
+    ``song_reference``: measure the song's loudness on this instead of ``song_aligned``.
+    Used for play-along splicing: the bed (song minus an instrument) gets the same gain the
+    full song would have, so it keeps its natural level, and the player's instrument is set
+    relative to the full song: it stands in for the part that was removed.
+    """
     s = settings or MixSettings()
     inst, song = to_stereo(instrument), to_stereo(song_aligned)
-    if len(inst) != len(song):
+    ref = song if song_reference is None else to_stereo(song_reference)
+    if not (len(inst) == len(song) == len(ref)):
         raise ValueError("instrument and song must be the same length; align the song first")
-    song_in = integrated_lufs(song, sr)
+    song_in = integrated_lufs(ref, sr)
     inst_in = integrated_lufs(inst, sr)
     song_g = s.song_lufs - song_in if np.isfinite(song_in) else 0.0
     inst_g = (s.song_lufs + s.instrument_rel_db) - inst_in if np.isfinite(inst_in) else 0.0
