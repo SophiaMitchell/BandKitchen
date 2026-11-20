@@ -1,0 +1,13 @@
+{
+  "_about": "Real recordings, kept OUT of git. Put the files in a folder and run: BANDKITCHEN_MEDIA_DIR=/path/to/folder pytest -m local_media. File names are glob patterns relative to that folder. expected_offset_s is the hand-sync measured to the sample from the iMovie export.",
+  "cases": [
+    {
+      "name": "The Man (The Killers), drums",
+      "video": "TheManFullSingle.mov",
+      "song": "*The?Man*.mp3",
+      "expected_offset_s": 1.9512,
+      "tolerance_s": 0.020,
+      "_tolerance_note": "Auto-sync lands ~+13 ms from the hand-sync; kick vs snare timing alone differs by 10-20 ms on this take. Tighten once we decide how to reconcile with by-ear alignment."
+    }
+  ]
+}
