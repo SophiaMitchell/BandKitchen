@@ -128,7 +128,7 @@ def render_files(
     sr = mix.RENDER_SR
     inst = mix.to_stereo(media.load_audio(video, sr))
     full = mix.align_song(media.load_audio(song, sr), offset_s, len(inst), sr)
-    settings = settings or mix.MixSettings()
+    settings = settings or mix.default_settings(spliced=bool(remove))
 
     stems_report = None
     if sep is not None:

@@ -17,16 +17,30 @@ from .loudness import integrated_lufs
 
 RENDER_SR = 48000
 
+# Default player level relative to the song, in dB. Tuned by ear on the owner's drum takes:
+# with the original drums still in the song the two kits double up, so the player sits a
+# little lower; with them removed (play-along splicing) the player's kit is the only drum
+# part and sits closer to the song.
+DEFAULT_INSTRUMENT_DB = -3.0
+DEFAULT_INSTRUMENT_DB_SPLICED = -2.0
+
 
 @dataclass(frozen=True)
 class MixSettings:
     song_lufs: float = -14.0  # streaming-ish target for the song bed
-    instrument_rel_db: float = -3.0  # player's audio relative to the song
+    instrument_rel_db: float = DEFAULT_INSTRUMENT_DB  # player's audio relative to the song
     ceiling_dbfs: float = -1.0  # limiter sample-peak ceiling
     limiter_window_ms: float = 20.0  # gain ramps down over this window ahead of a peak
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def default_settings(spliced: bool) -> MixSettings:
+    """Defaults for a render with (``spliced``) or without the player's part removed."""
+    return MixSettings(
+        instrument_rel_db=DEFAULT_INSTRUMENT_DB_SPLICED if spliced else DEFAULT_INSTRUMENT_DB
+    )
 
 
 @dataclass(frozen=True)

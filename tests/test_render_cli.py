@@ -102,3 +102,53 @@ def test_cli_missing_file_is_clean_error(tmp_path, capsys):
     code = cli.main(["loudness", str(tmp_path / "nope.mp3")])
     assert code == 1
     assert "error:" in capsys.readouterr().err
+
+
+def test_cli_render_remove_drums_hpss(files, capsys, tmp_path, monkeypatch):
+    """End-to-end splicing with the no-install fallback separator."""
+    monkeypatch.setenv("BANDKITCHEN_CACHE", str(tmp_path / "cache"))
+    video, song, d = files
+    out_path = d / "nodrums.mp4"
+    args = [
+        "render",
+        str(video),
+        str(song),
+        "-o",
+        str(out_path),
+        "--json",
+        "--remove",
+        "drums",
+        "--separator",
+        "hpss",
+    ]
+    assert cli.main(args) == 0
+    rep = json.loads(capsys.readouterr().out)
+    assert rep["removed"] == "drums"
+    assert rep["stems"]["cached"] is False
+    assert rep["settings"]["instrument_rel_db"] == -2.0
+    assert rep["offset_s"] == pytest.approx(OFFSET, abs=0.015)
+    assert media.probe(out_path).has_video
+    assert cli.main(args) == 0
+    assert json.loads(capsys.readouterr().out)["stems"]["cached"] is True
+
+
+def test_cli_render_explicit_level_overrides_spliced_default(files, capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("BANDKITCHEN_CACHE", str(tmp_path / "cache"))
+    video, song, d = files
+    cli.main(
+        [
+            "render",
+            str(video),
+            str(song),
+            "-o",
+            str(d / "x.mp4"),
+            "--json",
+            "--remove",
+            "drums",
+            "--separator",
+            "hpss",
+            "--instrument-db",
+            "-5",
+        ]
+    )
+    assert json.loads(capsys.readouterr().out)["settings"]["instrument_rel_db"] == -5.0

@@ -1,7 +1,7 @@
 """Command-line interface. Every command can emit JSON (--json) so the UI can drive it.
 
 bandkitchen sync VIDEO SONG [--drift-report] [--json]
-bandkitchen render VIDEO SONG -o OUT.mp4 [--instrument-db -3] [--song-lufs -14]
+bandkitchen render VIDEO SONG -o OUT.mp4 [--instrument-db DB] [--song-lufs -14]
                    [--offset SECONDS] [--json]
 bandkitchen loudness FILE [--json]
 """
@@ -38,7 +38,13 @@ def _cmd_sync(a: argparse.Namespace) -> int:
 
 def _cmd_render(a: argparse.Namespace) -> int:
     settings = mix.MixSettings(
-        song_lufs=a.song_lufs, instrument_rel_db=a.instrument_db, ceiling_dbfs=a.ceiling
+        song_lufs=a.song_lufs,
+        instrument_rel_db=(
+            a.instrument_db
+            if a.instrument_db is not None
+            else mix.default_settings(spliced=bool(a.remove)).instrument_rel_db
+        ),
+        ceiling_dbfs=a.ceiling,
     )
     sep = stems.make_separator(a.separator, a.remove) if a.remove else None
     rep = engine.render_files(
@@ -117,8 +123,9 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument(
         "--instrument-db",
         type=float,
-        default=mix.MixSettings.instrument_rel_db,
-        help="your audio's loudness relative to the song, dB (default %(default)s)",
+        default=None,
+        help="your audio's loudness relative to the song, dB (default "
+        f"{mix.DEFAULT_INSTRUMENT_DB:g}, or {mix.DEFAULT_INSTRUMENT_DB_SPLICED:g} with --remove)",
     )
     r.add_argument(
         "--song-lufs",
