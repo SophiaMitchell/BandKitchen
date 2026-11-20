@@ -13,8 +13,9 @@ renders a shareable video. Owner: a drummer and senior engineer; treat her as th
   talk to it.
 
 Pipeline modules: `media` (ffmpeg decode → float32, probe) → `sync` (offset + drift report)
-→ `mix` (LUFS gain staging, balance, limiter) → `render` (mux). Planned: `stems` (Demucs),
-`library` (mp3 index + analysis cache keyed by file hash), presets.
+→ `stems` (optional: remove the player's instrument; Demucs or an HPSS fallback) → `mix`
+(LUFS gain staging, balance, limiter) → `render` (mux). `cache` stores stems keyed by the song
+file's hash. Planned: `library` (mp3 index), presets.
 
 ## Firm rules (do not change without the owner's say-so)
 1. **Float32 until the final limiter.** Phone audio is often stored far above full scale
@@ -31,6 +32,9 @@ Pipeline modules: `media` (ffmpeg decode → float32, probe) → `sync` (offset 
    (`tests/synth.py`); real recordings are local-only (`tests/local_cases.json`).
 7. Report low sync confidence instead of guessing (`engine.MIN_PEAK_MARGIN`,
    `MIN_CORRELATION`).
+8. **Splicing:** sync against the *full* song, never the bed. Mix the bed with the full song's
+   gain (`song_reference`), so the player's part stands in for the removed one. Default levels
+   (−3 dB, −2 dB when spliced) were tuned by ear by the owner; don't change them without her.
 
 ## Commands
 ```bash
@@ -40,10 +44,11 @@ BANDKITCHEN_MEDIA_DIR=~/BandKitchenMedia pytest -m local_media   # real recordin
 ruff check . && ruff format --check .
 bandkitchen sync VIDEO SONG --drift-report
 bandkitchen render VIDEO SONG -o out.mp4 --instrument-db -3
+bandkitchen render VIDEO SONG -o out.mp4 --remove drums        # needs .[stems]
 ```
 
 ## Conventions
-- Python ≥ 3.10, numpy/scipy core; DSP is implemented directly on top of them. Heavy
+- Python 3.10–3.14 (PyTorch has no 3.15 builds yet), numpy/scipy core; DSP is implemented directly on top of them. Heavy
   dependencies (e.g. demucs for stems) are optional extras; keep the core importable without
   them.
 - Pure functions on numpy arrays in DSP modules; file I/O only in `media`, `render`, `engine`.

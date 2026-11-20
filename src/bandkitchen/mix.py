@@ -17,16 +17,30 @@ from .loudness import integrated_lufs
 
 RENDER_SR = 48000
 
+# Default player level relative to the song, in dB. Tuned by ear on the owner's drum takes:
+# with the original drums still in the song the two kits double up, so the player sits a
+# little lower; with them removed (play-along splicing) the player's kit is the only drum
+# part and sits closer to the song.
+DEFAULT_INSTRUMENT_DB = -3.0
+DEFAULT_INSTRUMENT_DB_SPLICED = -2.0
+
 
 @dataclass(frozen=True)
 class MixSettings:
     song_lufs: float = -14.0  # streaming-ish target for the song bed
-    instrument_rel_db: float = -3.0  # player's audio relative to the song
+    instrument_rel_db: float = DEFAULT_INSTRUMENT_DB  # player's audio relative to the song
     ceiling_dbfs: float = -1.0  # limiter sample-peak ceiling
     limiter_window_ms: float = 20.0  # gain ramps down over this window ahead of a peak
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def default_settings(spliced: bool) -> MixSettings:
+    """Defaults for a render with (``spliced``) or without the player's part removed."""
+    return MixSettings(
+        instrument_rel_db=DEFAULT_INSTRUMENT_DB_SPLICED if spliced else DEFAULT_INSTRUMENT_DB
+    )
 
 
 @dataclass(frozen=True)
@@ -111,14 +125,25 @@ def limit(
 
 
 def mix(
-    instrument: np.ndarray, song_aligned: np.ndarray, sr: int, settings: MixSettings | None = None
+    instrument: np.ndarray,
+    song_aligned: np.ndarray,
+    sr: int,
+    settings: MixSettings | None = None,
+    song_reference: np.ndarray | None = None,
 ) -> tuple[np.ndarray, MixReport]:
-    """Mix the player's audio with the (already aligned) song. Both float, same length."""
+    """Mix the player's audio with the (already aligned) song. All float, same length.
+
+    ``song_reference``: measure the song's loudness on this instead of ``song_aligned``.
+    Used for play-along splicing: the bed (song minus an instrument) gets the same gain the
+    full song would have, so it keeps its natural level, and the player's instrument is set
+    relative to the full song: it stands in for the part that was removed.
+    """
     s = settings or MixSettings()
     inst, song = to_stereo(instrument), to_stereo(song_aligned)
-    if len(inst) != len(song):
+    ref = song if song_reference is None else to_stereo(song_reference)
+    if not (len(inst) == len(song) == len(ref)):
         raise ValueError("instrument and song must be the same length; align the song first")
-    song_in = integrated_lufs(song, sr)
+    song_in = integrated_lufs(ref, sr)
     inst_in = integrated_lufs(inst, sr)
     song_g = s.song_lufs - song_in if np.isfinite(song_in) else 0.0
     inst_g = (s.song_lufs + s.instrument_rel_db) - inst_in if np.isfinite(inst_in) else 0.0
