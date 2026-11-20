@@ -9,6 +9,9 @@ from __future__ import annotations
 import numpy as np
 import scipy.signal as ss
 
+# K-weighting gain at the 997 Hz reference tone, subtracted so that tone reads at its
+# unweighted level (see integrated_lufs). Defined by BS.1770.
+K_WEIGHT_OFFSET_DB = -0.691
 ABS_GATE_LUFS = -70.0
 REL_GATE_LU = -10.0
 BLOCK_S = 0.400
@@ -48,8 +51,8 @@ def _highpass(sr: int) -> tuple[np.ndarray, np.ndarray]:
 
     BS.1770 publishes it at 48 kHz (Annex 1, Table 2). As with the shelf, the constants are
     the analog parameters that reproduce that table, so it works at any sample rate. The
-    numerator stays exactly [1, -2, 1] as in the standard: the -0.691 dB calibration in
-    ``integrated_lufs`` was computed with that numerator, so normalizing it would shift
+    numerator stays exactly [1, -2, 1] as in the standard: the K_WEIGHT_OFFSET_DB calibration
+    was computed with that numerator, so normalizing it would shift
     every reading slightly.
     """
     # f0: cutoff frequency, Hz (~38 Hz; content below this is progressively ignored)
@@ -68,6 +71,11 @@ def k_weight(x: np.ndarray, sr: int) -> np.ndarray:
     return ss.lfilter(b2, a2, ss.lfilter(b1, a1, x, axis=0), axis=0)
 
 
+def _lufs(mean_square: np.ndarray | float) -> np.ndarray | float:
+    """Mean square (summed over channels) -> loudness in LUFS."""
+    return K_WEIGHT_OFFSET_DB + 10 * np.log10(mean_square)
+
+
 def integrated_lufs(x: np.ndarray, sr: int) -> float:
     """Integrated loudness of mono (n,) or multichannel (n, ch) float audio.
 
@@ -77,7 +85,8 @@ def integrated_lufs(x: np.ndarray, sr: int) -> float:
     sum across channels, drop blocks below -70 LUFS (absolute gate), then drop blocks more
     than 10 LU below the average of what's left (relative gate), and average the rest.
 
-    Where -0.691 comes from: loudness is ``-0.691 + 10*log10(mean square)``. K-weighting is
+    Where K_WEIGHT_OFFSET_DB (-0.691) comes from: loudness is
+    ``-0.691 + 10*log10(mean square)`` (see ``_lufs``). K-weighting is
     not flat at 1 kHz: at 997 Hz (the standard's reference tone) the two filters together
     boost the signal by about +0.691 dB. Subtracting 0.691 dB cancels that, so a 997 Hz tone
     reads the same as its unweighted level. A full-scale sine has a mean square of 0.5, so
@@ -98,11 +107,11 @@ def integrated_lufs(x: np.ndarray, sr: int) -> float:
     ms = (csum[starts + block] - csum[starts]) / block
     z = ms.sum(axis=1)
     with np.errstate(divide="ignore"):
-        lk = -0.691 + 10 * np.log10(z)
+        lk = _lufs(z)
     gated = z[lk > ABS_GATE_LUFS]
     if len(gated) == 0:
         return float("-inf")
-    rel = -0.691 + 10 * np.log10(gated.mean()) + REL_GATE_LU
+    rel = _lufs(gated.mean()) + REL_GATE_LU
     with np.errstate(divide="ignore"):
-        final = gated[(-0.691 + 10 * np.log10(gated)) > rel]
-    return float(-0.691 + 10 * np.log10(final.mean()))
+        final = gated[_lufs(gated) > rel]
+    return float(_lufs(final.mean()))
