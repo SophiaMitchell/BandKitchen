@@ -43,8 +43,9 @@ bandkitchen render VIDEO SONG -o out.mp4 --instrument-db -3
 ```
 
 ## Conventions
-- Python ≥ 3.10, numpy/scipy core. librosa/demucs are optional extras for features that need
-  them; keep the core importable without them.
+- Python ≥ 3.10, numpy/scipy core; DSP is implemented directly on top of them. Heavy
+  dependencies (e.g. demucs for stems) are optional extras; keep the core importable without
+  them.
 - Pure functions on numpy arrays in DSP modules; file I/O only in `media`, `render`, `engine`.
 - Every DSP change needs a test with a known answer (synthetic signal with a known offset,
   level, etc.). If you change sync, also run the local-media test if media is available.

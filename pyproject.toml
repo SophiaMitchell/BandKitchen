@@ -15,8 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Planned: librosa for chroma/fingerprint song matching, demucs for stem removal.
-analysis = ["librosa>=0.10"]
+# Planned: demucs for stem removal (play-along splicing).
 stems = ["demucs>=4.0"]
 dev = ["pytest>=7", "ruff>=0.4"]
 
