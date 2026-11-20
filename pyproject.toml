@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bandkitchen"
+version = "0.1.0"
+description = "Auto-sync a play-along video to the original song, balance the mix, and render a shareable video."
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+# Planned: librosa for chroma/fingerprint song matching, demucs for stem removal.
+analysis = ["librosa>=0.10"]
+stems = ["demucs>=4.0"]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+bandkitchen = "bandkitchen.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = [
+    "local_media: needs real recordings; set BANDKITCHEN_MEDIA_DIR (skipped otherwise)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY"]

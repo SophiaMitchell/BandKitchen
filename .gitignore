@@ -1,0 +1,31 @@
+# Media: never commit songs or recordings (copyright + repo size)
+*.mp3
+*.m4a
+*.wav
+*.aiff
+*.flac
+*.mov
+*.mp4
+*.m4v
+media/
+renders/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Engine cache (analysis, stems)
+.bandkitchen-cache/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.iml
