@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Auto-sync a play-along video to the original song, balance the mix, and render a shareable video."
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",

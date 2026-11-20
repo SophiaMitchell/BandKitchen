@@ -17,10 +17,32 @@ Planned: play-along splicing (remove your instrument from the song with Demucs),
 library, presets, and a retro Java desktop UI with live mixing.
 
 ## Quick start
-Requires Python 3.10+ and ffmpeg (`brew install ffmpeg`).
+Requires Python 3.10–3.14 and ffmpeg (`brew install ffmpeg`). Stem separation depends on
+PyTorch, which doesn't support Python 3.15 yet.
+
+### Set up a virtual environment
+**If your default Python is older than 3.10 or newer than 3.14, you must do this step.** It
+pins the project to a supported version. macOS ships Python 3.9, so this applies to most Macs.
 
 ```bash
-pip install -e ".[dev]"
+brew install python@3.12
+cd BandKitchen
+python3.12 -m venv .venv
+source .venv/bin/activate          # run in each new terminal; prompt shows (.venv)
+python --version                   # should say 3.12.x
+python -m pip install -e ".[stems,dev]"
+```
+
+The install creates the `bandkitchen` command inside `.venv`, so it works whenever the venv is
+active. Do it once per new venv, or again when `pyproject.toml` changes. If `python --version`
+doesn't say 3.12, delete `.venv` and recreate it with the full path
+`/opt/homebrew/bin/python3.12 -m venv .venv`.
+
+`stems` installs Demucs (for removing your instrument from the song) and `dev` installs the
+test and lint tools. Both are optional.
+
+### Run it
+```bash
 bandkitchen sync TheManFullSingle.mov "02 - The Man.mp3" --drift-report
 bandkitchen render TheManFullSingle.mov "02 - The Man.mp3" -o TheMan.mp4 --instrument-db -3
 ```
