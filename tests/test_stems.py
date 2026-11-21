@@ -51,6 +51,9 @@ class FakeSeparator:
     def stems(self):
         return tuple(self.parts)
 
+    def removable(self):
+        return tuple(self.parts)
+
     def separate(self, audio):
         self.calls += 1
         n = len(audio)
@@ -213,16 +216,29 @@ def test_synth_rate_matches_sync_rate():
     ids=lambda s: s.cache_id,
 )
 def test_every_separator_stem_is_a_valid_cli_choice(separator):
-    """INSTRUMENTS feeds the CLI's --remove/--instrument choices; a stem missing from it
-    could never be selected."""
+    """INSTRUMENTS feeds the CLI's --remove choices; a stem missing from it could never be
+    selected. Removable stems must also be real stems."""
     assert set(separator.stems()) <= set(stems.INSTRUMENTS)
+    assert set(separator.removable()) <= set(separator.stems())
 
 
-def test_every_cli_choice_is_produced_by_some_separator():
-    produced = set()
+def test_every_cli_choice_is_removable_by_some_separator():
+    removable = set()
     for s in (stems.HpssSeparator(), stems.DemucsSeparator("htdemucs_6s")):
-        produced |= set(s.stems())
-    assert set(stems.INSTRUMENTS) <= produced
+        removable |= set(s.removable())
+    assert set(stems.INSTRUMENTS) <= removable
+
+
+@pytest.mark.parametrize("instrument", ["bass", "vocals", "guitar", "piano", "other"])
+def test_hpss_only_removes_drums_with_a_helpful_error(instrument):
+    with pytest.raises(ValueError, match=r"only remove drums.*\.\[stems\]"):
+        stems.check_can_remove(stems.HpssSeparator(), instrument)
+    stems.check_can_remove(stems.HpssSeparator(), "drums")  # no error
+
+
+def test_demucs_can_remove_everything_its_model_provides():
+    for instrument in stems.INSTRUMENTS:
+        stems.check_can_remove(stems.make_separator("demucs", instrument), instrument)
 
 
 @pytest.mark.skipif(importlib.util.find_spec("demucs") is None, reason="needs demucs")

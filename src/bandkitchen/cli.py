@@ -77,7 +77,8 @@ def _cmd_render(a: argparse.Namespace) -> int:
 
 
 def _cmd_stems(a: argparse.Namespace) -> int:
-    sep = stems.make_separator(a.separator, a.instrument)
+    sep = stems.make_separator(a.separator, a.remove)
+    stems.check_can_remove(sep, a.remove)
     _, rep = engine.separate_song(a.song, sep, use_cache=True)
     _emit(
         rep.to_dict(),
@@ -171,10 +172,11 @@ def build_parser() -> argparse.ArgumentParser:
     st = sub.add_parser("stems", help="separate a song into stems ahead of time (cached)")
     st.add_argument("song", help="the original song (.mp3, .m4a, .wav, .flac, ...)")
     st.add_argument(
-        "--instrument",
+        "--remove",
         choices=stems.INSTRUMENTS,
         default="drums",
-        help="picks the model: guitar/piano need the 6-stem model",
+        help="the instrument a later `render --remove` will take out (default %(default)s); "
+        "picks the model, since guitar and piano need the 6-stem one",
     )
     st.add_argument("--separator", choices=("demucs", "hpss"), default="demucs")
     st.add_argument("--json", action="store_true")
