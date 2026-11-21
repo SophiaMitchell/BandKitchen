@@ -12,7 +12,6 @@ Inspired by the fact that I'm a drummer who likes to drum along to Spotify. I al
   your instrument a set number of dB under the song, and limits peaks. A blown-out phone mic
   no longer clips the export.
 - **Render:** copies your video untouched and replaces the audio with the mix.
-
 - **Play-along splicing:** removes your instrument from the song with Demucs, so your
   part replaces the original. Separated songs are cached, so later renders are quick.
 
@@ -46,24 +45,142 @@ test and lint tools. Both are optional.
 ### Run it
 ```bash
 bandkitchen sync TheManFullSingle.mov "02 - The Man.mp3" --drift-report
-bandkitchen render TheManFullSingle.mov "02 - The Man.mp3" -o TheMan.mp4 --instrument-db -3
-```
-
-To replace the band's drummer with you, add `--remove drums`:
-
-```bash
+bandkitchen render TheManFullSingle.mov "02 - The Man.mp3" -o TheMan.mp4
 bandkitchen render HarderToBreatheSingle.mov "01 - Harder To Breathe.mp3" -o HTB.mp4 --remove drums
 ```
 
-The first run of a song downloads the Demucs model (about 80 MB) and separates the song, which
-takes around a minute. After that, the stems are cached in `~/.bandkitchen-cache`. `--remove`
-also takes `bass` and `vocals`, plus `guitar` and `piano` (these two use a 6-stem model and
-separate less cleanly). `--separator hpss` is a rough, drums-only fallback that needs no
-PyTorch.
+The first `--remove` run on a song downloads the Demucs model (about 80 MB) and separates the
+song, which takes around a minute. After that, the stems are cached and later renders are quick.
+Tip: drag a file into Terminal to paste its full path, quoted correctly.
 
-`--instrument-db` sets your instrument's level relative to the song (negative means quieter).
-The default is −3 dB, or −2 dB with `--remove`. `--offset` overrides auto-sync. Add `--json` to
-any command for machine-readable output.
+## Instruments you can remove
+Pass one of these to `--remove`:
+
+| `--remove` | Takes out of the song | Separation quality |
+|---|---|---|
+| `drums` | The full kit: kick, snare, toms, cymbals | Very clean |
+| `bass` | Bass guitar, synth bass | Very clean |
+| `vocals` | Lead and backing vocals | Clean |
+| `guitar` | Electric and acoustic guitars | Usable, some bleed (6-stem model) |
+| `piano` | Piano and keys | Usable, some bleed (6-stem model) |
+| `other` | Everything that isn't drums, bass or vocals (guitars, keys, synths, strings) | Clean |
+
+`guitar` and `piano` switch automatically to Demucs's 6-stem model, which separates those two
+less cleanly than the rest. With `--separator hpss` (the no-PyTorch fallback), only `drums` and `other`
+work, and `drums` removes snare and cymbals far better than the kick.
+
+## Command reference
+Every command takes `--json` to print a machine-readable result instead of text, and `-h` to
+show its help. Exit codes: `0` success, `1` error (missing file, bad option, Demucs not
+installed), `2` sync confidence too low (`sync` only).
+
+### `bandkitchen sync VIDEO SONG`
+Finds where the video sits in the song, without writing any files.
+
+| Input | Description |
+|---|---|
+| `VIDEO` | Your play-along recording (.mov, .mp4, .m4v...). Needs a video and an audio track |
+| `SONG` | The original song (.mp3, .m4a, .wav, .flac, .aiff...) |
+
+| Option | Default | Description |
+|---|---|---|
+| `--drift-report` | off | Show where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
+| `--json` | off | Print the result as JSON |
+
+**Output:** the offset in seconds (song time at the video's first frame; negative means the
+video starts before the song), the confidence numbers, and optionally the drift report.
+
+#### Reading the drift report
+Auto-sync lines your whole video up with the song using one fixed offset. It never stretches
+or nudges your playing, so your real timing stays audible. `--drift-report` then shows how far
+your playing sat from that line through the song, as a practice tool:
+
+```
+offset: -3.442 s  (song time at video start)
+correlation 0.37, peak margin 0.38
+    16.0s    +5.1 ms early #
+    24.0s    -8.2 ms late  #
+    40.0s   +15.5 ms early ###
+    56.0s   -14.1 ms late  ##
+```
+
+- **Time (left):** the middle of each stretch analysed, in *video* time, so you can scrub to it.
+  Each line looks at 16 s of playing, and lines are 8 s apart, so neighbouring lines overlap.
+- **ms early / late:** how far ahead of the record (early, positive: rushing) or behind it
+  (late, negative: dragging) you were on average in that stretch, compared with your average
+  across the whole take.
+- **The bar:** one `#` per 5 ms, for spotting the biggest moments at a glance.
+
+How to interpret it:
+- **Within about ±10 ms is tight.** Two drummers never hit at exactly the same moment, and the
+  record's drummer has their own feel too, so small numbers are normal.
+- **Look for runs, not single lines.** Several lines drifting the same way (for example +20,
+  +25, +30) means you're steadily speeding up through that section. A one-off spike often
+  comes from a fill or a section where the parts differ.
+- **Sparse sections read less reliably.** Breaks, intros or anywhere with little to match can
+  produce odd numbers. With `--json`, each point includes a `strength` value; low strength
+  means there was little to compare.
+- Each point is only searched within ±150 ms of the overall offset, so a report can't jump a
+  whole beat.
+
+The report never changes the render. Drift correction, if it's ever added, will be a separate
+option that's off by default.
+
+### `bandkitchen render VIDEO SONG -o OUTPUT`
+Syncs, mixes and writes the combined video.
+
+| Input | Description |
+|---|---|
+| `VIDEO` | Your play-along recording (as for `sync`) |
+| `SONG` | The original song (as for `sync`) |
+| `-o`, `--output` | The video file to write. `.mp4` recommended; `.mov` also works |
+
+| Option | Default | Description |
+|---|---|---|
+| `--remove INSTRUMENT` | none | Take an instrument out of the song first (see the table above) |
+| `--instrument-db DB` | −3, or −2 with `--remove` | Your recording's loudness relative to the song, in dB. Negative is quieter |
+| `--song-lufs LUFS` | −14 | Loudness target for the song |
+| `--ceiling DBFS` | −1 | Limiter ceiling: the loudest any sample can be |
+| `--offset SECONDS` | auto | Skip auto-sync and use this offset |
+| `--separator` | `demucs` | `demucs` (best, needs the `stems` extra) or `hpss` (rough, drums only) |
+| `--no-cache` | off | Separate the song again even if its stems are cached |
+| `--json` | off | Print the result as JSON |
+
+**Output:** the video file, with your original video stream copied untouched (no re-encoding)
+and the audio replaced by the mix (AAC, 256 kbps, 48 kHz stereo). It is the same length as
+your video. The command also prints the offset used, the gain applied to each track and the
+final loudness and peak. Low sync confidence prints a warning but still renders.
+
+### `bandkitchen stems SONG`
+Separates a song ahead of time, so a later `render --remove` skips that step.
+
+| Input | Description |
+|---|---|
+| `SONG` | The original song |
+
+| Option | Default | Description |
+|---|---|---|
+| `--instrument INSTRUMENT` | `drums` | Picks the model: `guitar` or `piano` use the 6-stem one; anything else uses the 4-stem one |
+| `--separator` | `demucs` | `demucs` or `hpss` |
+| `--json` | off | Print the result as JSON |
+
+**Output:** stems written to the cache; prints whether they were already cached.
+
+### `bandkitchen loudness FILE`
+Measures a file's loudness.
+
+| Input | Description |
+|---|---|
+| `FILE` | Any audio or video file |
+
+**Output:** integrated loudness (LUFS) and sample peak, noting if the file goes over full scale.
+Option: `--json`.
+
+### Environment variables
+| Variable | Default | Description |
+|---|---|---|
+| `BANDKITCHEN_CACHE` | `~/.bandkitchen-cache` | Where separated stems are stored. Safe to delete; stems are recreated when needed |
+| `BANDKITCHEN_MEDIA_DIR` | unset | Folder of your own recordings, for `pytest -m local_media` |
 
 ## Development
 ```bash
