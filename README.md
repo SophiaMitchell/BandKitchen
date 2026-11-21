@@ -47,7 +47,7 @@ test and lint tools. Both are optional.
 ### `bandkitchen [FUNCTION] [VIDEO] [SONG] -o [OPTIONS]`
 
 | Input | Description |
-|---|---|
+|:------------------|:---|
 | `FUNCTION` | Select a main function for bandkitchen (see list below) |
 | `VIDEO` | Your play-along video recording (.mov, .mp4, .m4v...) |
 | `SONG` | The original song (.mp3, .m4a, .wav, .flac, .aiff...) |
@@ -68,8 +68,8 @@ Functions:
             `bandkitchen loudness mydrums.mov --json` 
 
 | Option | Default | Description |
-|---|---|---|
-| `--drift-report` | off | Show where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
+|:---------------------------|:-----:|:---|
+| `--drift-report` | off | Shows where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
 | `--remove INSTRUMENT` | none | Take an instrument out of the song file (see [Removing Instruments](#removing-instruments)) |
 | `--separator` | `demucs` | Select the instrument separator tool to use (goes with `--remove`), `demucs` (best quality, needs the `stems` extra) or `hpss` (rough, drums only) |
 | `--instrument INSTRUMENT` | `drums` | Picks the demucs model to use if using it for separation: `guitar` or `piano` use the 6-stem one; anything else uses the 4-stem one |
@@ -84,7 +84,7 @@ Exit codes: `0` success, `1` error (missing file, bad option, Demucs not install
 
 ### Environment variables
 | Variable | Default | Description |
-|---|---|---|
+|:---------------------:|:---:|:---|
 | `BANDKITCHEN_CACHE` | `~/.bandkitchen-cache` | Where separated stems are stored. Safe to delete; stems are recreated when needed |
 | `BANDKITCHEN_MEDIA_DIR` | unset | Folder of your own recordings, for `pytest -m local_media` |
 
