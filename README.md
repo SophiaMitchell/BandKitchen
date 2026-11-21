@@ -68,7 +68,7 @@ Functions:
             `bandkitchen loudness mydrums.mov --json` 
 
 | Option | Default | Description |
-|:---------------------------|:-----:|:---|
+|:---------------------------|:-------------------------:|:---|
 | `--drift-report` | off | Shows where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
 | `--remove INSTRUMENT` | none | Take an instrument out of the song file (see [Removing Instruments](#removing-instruments)) |
 | `--separator` | `demucs` | Select the instrument separator tool to use (goes with `--remove`), `demucs` (best quality, needs the `stems` extra) or `hpss` (rough, drums only) |
@@ -84,7 +84,7 @@ Exit codes: `0` success, `1` error (missing file, bad option, Demucs not install
 
 ### Environment variables
 | Variable | Default | Description |
-|:---------------------:|:---:|:---|
+|:---------------------|:-------------------------|:---|
 | `BANDKITCHEN_CACHE` | `~/.bandkitchen-cache` | Where separated stems are stored. Safe to delete; stems are recreated when needed |
 | `BANDKITCHEN_MEDIA_DIR` | unset | Folder of your own recordings, for `pytest -m local_media` |
 
@@ -100,7 +100,7 @@ The first time `--remove` is run on an .mp3, this tool downloads the Demucs mode
 song, which takes around a minute. After that, the stems are cached locally so subsequent renders are quick (~15/sec).
 
 | `--remove` | Takes out of the song | Separation quality |
-|---|---|---|
+|:------------|:---|:---:|
 | `drums` | The full kit: kick, snare, toms, cymbals | Very clean |
 | `bass` | Bass guitar, synth bass | Very clean |
 | `vocals` | Lead and backing vocals | Clean |
