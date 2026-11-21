@@ -119,8 +119,7 @@ def render_files(
     sep = None
     if remove:  # check before any slow work
         sep = separator or stems.make_separator("demucs", remove)
-        if remove not in sep.stems():
-            raise ValueError(f"{sep.cache_id} can't isolate {remove!r}; it provides {sep.stems()}")
+        stems.check_can_remove(sep, remove)
     sync_report = None
     if offset_s is None:
         sync_report = sync_files(video, song)

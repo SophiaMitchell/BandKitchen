@@ -61,8 +61,8 @@ Functions:
 * `render` : Syncs, mixes and writes the combined video. Requires an output file name. Outputs a video file, with your original video stream copied untouched (no re-encoding) and the audio replaced by the mix (AAC, 256 kbps, 48 kHz stereo). Audio is trimmed and/or padded to result in a video the same length as your original video. The command also prints the offset used, the gain applied to each track and the final loudness and peak. Low sync confidence prints a warning but still renders.\
             `bandkitchen render mydrums.mov hitsong.mp3 -o mydrumalong.mp4`
   
-* `stems ` : Separates a song ahead of time, so a later `render --remove` skips that step. Only requires a song input. Stems are written to the local cache. Alerts if they were already cached.\
-            `bandkitchen stems hitsong.mp3`
+* `stems ` : Separates a song ahead of time, so a later `render --remove` skips that step. Only requires a song input; pass the same `--remove` you'll use when rendering (default `drums`). Stems are written to the local cache. Alerts if they were already cached.\
+            `bandkitchen stems hitsong.mp3 --remove guitar`
   
 * `loudness` : Measures a file's loudness in dB. More negative is more quiet. Prints integrated loudness (LUFS) and sample peak, noting if the file goes over full scale.\
             `bandkitchen loudness mydrums.mov --json` 
@@ -70,9 +70,8 @@ Functions:
 | Option | Default | Description |
 |:---------------------------|:-------------------------:|:---|
 | `--drift-report` | off | Shows where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
-| `--remove INSTRUMENT` | none | Take an instrument out of the song file (see [Removing Instruments](#removing-instruments)) |
+| `--remove INSTRUMENT` | none (`drums` for `stems`) | Take an instrument out of the song file (see [Removing Instruments](#removing-instruments)). With `stems`, it says which instrument you'll remove later, which picks the Demucs model: `guitar` or `piano` use the 6-stem one, anything else the 4-stem one |
 | `--separator` | `demucs` | Select the instrument separator tool to use (goes with `--remove`), `demucs` (best quality, needs the `stems` extra) or `hpss` (rough, drums only) |
-| `--instrument INSTRUMENT` | `drums` | Picks the demucs model to use if using it for separation: `guitar` or `piano` use the 6-stem one; anything else uses the 4-stem one |
 | `--no-cache` | off | Separate the song again even if its stems are cached |
 | `--instrument-db DB` | −3, or −2 with `--remove` | Your recording's loudness relative to the song, in dB. Negative is quieter |
 | `--song-lufs LUFS` | −14 | Loudness target for the song |
@@ -112,8 +111,9 @@ song, which takes around a minute. After that, the stems are cached locally so s
 less cleanly than the rest. 
 
 ## Alternative to Demucs
-If you don't want to use Demucs, the option `--separator hpss` is a fallback. Only `drums` and `other`
-work, and `drums` removes snare and cymbals far better than the kick. So not great, but can get the job 
+If you don't want to use Demucs, the option `--separator hpss` is a fallback. It can only remove
+`drums`: any other `--remove` stops straight away with an error pointing you to Demucs. It removes
+snare and cymbals far better than the kick. So not great, but can get the job 
 done if you're a drummer.
 
 # Reading the Drift Report

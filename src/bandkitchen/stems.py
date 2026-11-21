@@ -8,7 +8,7 @@ Two separators share one interface (``separate(audio) -> {stem_name: audio}``):
   noticeably rougher. Needs the optional ``stems`` extra (PyTorch); the first run downloads
   the model weights (~80 MB). Roughly real-time-ish on an Apple-silicon CPU, so results are
   cached per song (see ``cache.py``).
-- ``HpssSeparator`` (fallback, drums only): harmonic/percussive separation by median
+- ``HpssSeparator`` (fallback; can only remove drums): harmonic/percussive separation by median
   filtering (Fitzgerald, 2010), pure numpy/scipy. Sustained tones form horizontal ridges
   in a spectrogram and hits form vertical ones, so a median along time keeps the sustained
   part and a median along frequency keeps the hits. It removes cymbals and snare well but
@@ -42,9 +42,31 @@ class Separator(Protocol):
         """Identifies the separator + settings, so cached stems are never mixed up."""
         ...
 
-    def stems(self) -> tuple[str, ...]: ...
+    def stems(self) -> tuple[str, ...]:
+        """Every stem ``separate`` returns (they sum back to the song)."""
+        ...
+
+    def removable(self) -> tuple[str, ...]:
+        """The stems ``--remove`` may take out. Can be fewer than ``stems()``."""
+        ...
 
     def separate(self, audio: np.ndarray) -> dict[str, np.ndarray]: ...
+
+
+def check_can_remove(separator: Separator, instrument: str) -> None:
+    """Raise a clear ValueError, before any slow work, if ``separator`` can't remove
+    ``instrument``."""
+    if instrument in separator.removable():
+        return
+    if isinstance(separator, HpssSeparator):
+        raise ValueError(
+            f"the hpss fallback can only remove drums, not {instrument!r}. For bass, vocals, "
+            'guitar, piano or other, use Demucs (the default): pip install -e ".[stems]"'
+        )
+    raise ValueError(
+        f"{separator.cache_id} can't remove {instrument!r}; "
+        f"it can remove {', '.join(separator.removable())}"
+    )
 
 
 def remove_instrument(stems: dict[str, np.ndarray], instrument: str) -> np.ndarray:
@@ -64,7 +86,11 @@ def remove_instrument(stems: dict[str, np.ndarray], instrument: str) -> np.ndarr
 
 
 class HpssSeparator:
-    """Median-filter harmonic/percussive separation. Stems: 'drums' (percussive), 'other'."""
+    """Median-filter harmonic/percussive separation. Stems: 'drums' (percussive), 'other'.
+
+    Only 'drums' is removable: removing 'other' would leave just the percussive part, which
+    is never what someone asking to remove "other instruments" wants.
+    """
 
     sample_rate = 44100
 
@@ -80,6 +106,9 @@ class HpssSeparator:
 
     def stems(self) -> tuple[str, ...]:
         return ("drums", "other")
+
+    def removable(self) -> tuple[str, ...]:
+        return ("drums",)
 
     def separate(self, audio: np.ndarray) -> dict[str, np.ndarray]:
         x = np.asarray(audio, dtype=np.float32)
@@ -119,6 +148,9 @@ class DemucsSeparator:
         if self.model_name == "htdemucs_6s":
             return ("drums", "bass", "other", "vocals", "guitar", "piano")
         return ("drums", "bass", "other", "vocals")
+
+    def removable(self) -> tuple[str, ...]:
+        return self.stems()
 
     def _load(self):
         if self._model is None:

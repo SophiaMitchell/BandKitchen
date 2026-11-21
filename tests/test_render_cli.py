@@ -152,3 +152,50 @@ def test_cli_render_explicit_level_overrides_spliced_default(files, capsys, tmp_
         ]
     )
     assert json.loads(capsys.readouterr().out)["settings"]["instrument_rel_db"] == -5.0
+
+
+def test_cli_hpss_rejects_non_drums_before_any_work(files, capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("BANDKITCHEN_CACHE", str(tmp_path / "cache"))
+    video, song, d = files
+    for args in (
+        [
+            "render",
+            str(video),
+            str(song),
+            "-o",
+            str(d / "x.mp4"),
+            "--remove",
+            "bass",
+            "--separator",
+            "hpss",
+        ],
+        ["stems", str(song), "--remove", "other", "--separator", "hpss"],
+    ):
+        assert cli.main(args) == 1
+        assert "only remove drums" in capsys.readouterr().err
+    assert not (tmp_path / "cache").exists()  # nothing was separated
+
+
+def test_cli_stems_then_render_uses_the_cache(files, capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("BANDKITCHEN_CACHE", str(tmp_path / "cache"))
+    video, song, d = files
+    assert cli.main(["stems", str(song), "--remove", "drums", "--separator", "hpss", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["cached"] is False
+    assert (
+        cli.main(
+            [
+                "render",
+                str(video),
+                str(song),
+                "-o",
+                str(d / "y.mp4"),
+                "--json",
+                "--remove",
+                "drums",
+                "--separator",
+                "hpss",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["stems"]["cached"] is True
