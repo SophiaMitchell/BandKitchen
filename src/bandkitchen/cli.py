@@ -106,8 +106,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("sync", help="find the song offset for a play-along video")
-    s.add_argument("video")
-    s.add_argument("song")
+    s.add_argument(
+        "video",
+        help="your play-along recording (.mov, .mp4, ...): needs a video and an audio track",
+    )
+    s.add_argument("song", help="the original song (.mp3, .m4a, .wav, .flac, ...)")
     s.add_argument(
         "--drift-report",
         action="store_true",
@@ -117,9 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=_cmd_sync)
 
     r = sub.add_parser("render", help="sync, mix and write the combined video")
-    r.add_argument("video")
-    r.add_argument("song")
-    r.add_argument("-o", "--output", required=True)
+    r.add_argument(
+        "video",
+        help="your play-along recording (.mov, .mp4, ...): needs a video and an audio track",
+    )
+    r.add_argument("song", help="the original song (.mp3, .m4a, .wav, .flac, ...)")
+    r.add_argument("-o", "--output", required=True, help="the video to write (.mp4 recommended)")
     r.add_argument(
         "--instrument-db",
         type=float,
@@ -163,7 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.set_defaults(func=_cmd_render)
 
     st = sub.add_parser("stems", help="separate a song into stems ahead of time (cached)")
-    st.add_argument("song")
+    st.add_argument("song", help="the original song (.mp3, .m4a, .wav, .flac, ...)")
     st.add_argument(
         "--instrument",
         choices=stems.INSTRUMENTS,
@@ -175,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
     st.set_defaults(func=_cmd_stems)
 
     lo = sub.add_parser("loudness", help="measure integrated loudness and peak of a file")
-    lo.add_argument("file")
+    lo.add_argument("file", help="any audio or video file")
     lo.add_argument("--json", action="store_true")
     lo.set_defaults(func=_cmd_loudness)
     return p
