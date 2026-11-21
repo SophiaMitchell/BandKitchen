@@ -198,3 +198,38 @@ def test_synth_rate_matches_sync_rate():
     from bandkitchen import sync
 
     assert SYNTH_SR == sync.ANALYSIS_SR
+
+
+# --- the CLI's instrument list stays in step with the separators -----------------------
+
+
+@pytest.mark.parametrize(
+    "separator",
+    [
+        stems.HpssSeparator(),
+        stems.DemucsSeparator("htdemucs"),
+        stems.DemucsSeparator("htdemucs_6s"),
+    ],
+    ids=lambda s: s.cache_id,
+)
+def test_every_separator_stem_is_a_valid_cli_choice(separator):
+    """INSTRUMENTS feeds the CLI's --remove/--instrument choices; a stem missing from it
+    could never be selected."""
+    assert set(separator.stems()) <= set(stems.INSTRUMENTS)
+
+
+def test_every_cli_choice_is_produced_by_some_separator():
+    produced = set()
+    for s in (stems.HpssSeparator(), stems.DemucsSeparator("htdemucs_6s")):
+        produced |= set(s.stems())
+    assert set(stems.INSTRUMENTS) <= produced
+
+
+@pytest.mark.skipif(importlib.util.find_spec("demucs") is None, reason="needs demucs")
+@pytest.mark.parametrize("model", ["htdemucs", "htdemucs_6s"])
+def test_demucs_declared_stems_match_the_real_model(model):
+    """stems() is hard-coded so it works without PyTorch; check it against the model itself.
+    Downloads the model weights on first run (then cached by PyTorch)."""
+    from demucs.pretrained import get_model
+
+    assert set(get_model(model).sources) == set(stems.DemucsSeparator(model).stems())
