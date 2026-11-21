@@ -43,9 +43,21 @@ doesn't say 3.12, delete `.venv` and recreate it with the full path
 test and lint tools. Both are optional.
 
 ### Run it
+
+The tool can be used in a few main ways (more options explained below): 
+
+1. To better understand how well you're keeping time with the recorded track without outputting anything, use the sync and drift-report options (see [Reading the drift report](#reading-the-drift-report)).
 ```bash
 bandkitchen sync TheManFullSingle.mov "02 - The Man.mp3" --drift-report
+```
+
+2. Synchronize the music to your video with render, leaving all of the original instruments in the track:
+```bash
 bandkitchen render TheManFullSingle.mov "02 - The Man.mp3" -o TheMan.mp4
+```
+
+3. Synchronize the music to your video with render, and use remove to get rid of the instrument you're playing from the audio track:
+```bash
 bandkitchen render HarderToBreatheSingle.mov "01 - Harder To Breathe.mp3" -o HTB.mp4 --remove drums
 ```
 
