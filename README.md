@@ -84,11 +84,47 @@ Finds where the video sits in the song, without writing any files.
 
 | Option | Default | Description |
 |---|---|---|
-| `--drift-report` | off | Show where you rushed or dragged, every 8 s. A diagnostic only; never applied |
+| `--drift-report` | off | Show where you rushed or dragged against the song (see [Reading the drift report](#reading-the-drift-report)). Never applied to the render |
 | `--json` | off | Print the result as JSON |
 
 **Output:** the offset in seconds (song time at the video's first frame; negative means the
 video starts before the song), the confidence numbers, and optionally the drift report.
+
+#### Reading the drift report
+Auto-sync lines your whole video up with the song using one fixed offset. It never stretches
+or nudges your playing, so your real timing stays audible. `--drift-report` then shows how far
+your playing sat from that line through the song, as a practice tool:
+
+```
+offset: -3.442 s  (song time at video start)
+correlation 0.37, peak margin 0.38
+    16.0s    +5.1 ms early #
+    24.0s    -8.2 ms late  #
+    40.0s   +15.5 ms early ###
+    56.0s   -14.1 ms late  ##
+```
+
+- **Time (left):** the middle of each stretch analysed, in *video* time, so you can scrub to it.
+  Each line looks at 16 s of playing, and lines are 8 s apart, so neighbouring lines overlap.
+- **ms early / late:** how far ahead of the record (early, positive: rushing) or behind it
+  (late, negative: dragging) you were on average in that stretch, compared with your average
+  across the whole take.
+- **The bar:** one `#` per 5 ms, for spotting the biggest moments at a glance.
+
+How to interpret it:
+- **Within about ±10 ms is tight.** Two drummers never hit at exactly the same moment, and the
+  record's drummer has their own feel too, so small numbers are normal.
+- **Look for runs, not single lines.** Several lines drifting the same way (for example +20,
+  +25, +30) means you're steadily speeding up through that section. A one-off spike often
+  comes from a fill or a section where the parts differ.
+- **Sparse sections read less reliably.** Breaks, intros or anywhere with little to match can
+  produce odd numbers. With `--json`, each point includes a `strength` value; low strength
+  means there was little to compare.
+- Each point is only searched within ±150 ms of the overall offset, so a report can't jump a
+  whole beat.
+
+The report never changes the render. Drift correction, if it's ever added, will be a separate
+option that's off by default.
 
 ### `bandkitchen render VIDEO SONG -o OUTPUT`
 Syncs, mixes and writes the combined video.
